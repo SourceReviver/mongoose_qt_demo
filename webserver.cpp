@@ -11,14 +11,27 @@ void webserver::process(struct mg_connection *c, int ev, void *ev_data,
 
     struct mg_str caps[2];  //  expected matchs +1
 
-    qDebug() << "Requested with uri" << mg_str_to_QString(&hm->uri);
+    qDebug() << "> Requested with uri" << mg_str_to_QString(&hm->uri);
 
     if (mg_match(hm->uri, mg_str("/query/*"), caps)) {
-      QString word = mg_str_to_QString(&caps[0]);
+      auto word = &caps[0];
+      char decodedStr[256];
+
+      int decodedLength = mg_url_decode(word->ptr,word->len,decodedStr,256,0);
+      if(decodedLength < 0){
+        invalidRequestHandler(c);
+        return;
+      };
+
+      QString qword = QString::fromUtf8(decodedStr,decodedLength);
+
+      qDebug()<< "Decoded word:" << qword;
+
       mg_http_reply(c, 200, "", "Result: %s \n",
-                    getWordMeaning(word).toUtf8().constData());
+                    getWordMeaning(qword).toUtf8().constData());
     } else {  // For all other URIs,
       invalidRequestHandler(c);
+      return;
     }
   }
 }
